@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: triplem
+    runtime: docker
+    plan: free        # upgrade to starter ($7/mo) for persistent disk
+    envVars:
+      - key: FLASK_ENV
+        value: production
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1

@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TripleM – Moodle Mission Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#09090f; --surface:#111118; --surface2:#18181f; --surface3:#22222c;
+      --border:#2a2a38; --border-s:#1e1e28;
+      --text:#f0f0ff; --muted:#7070a0; --subtle:#3a3a58;
+      --accent:#6c8fff; --accent-dim:rgba(108,143,255,.13);
+      --red:#ff6b7a; --red-dim:rgba(255,107,122,.12);
+      --green:#4ade88; --green-dim:rgba(74,222,136,.12);
+      --yellow:#fbbf24; --yellow-dim:rgba(251,191,36,.12);
+      --purple:#b48bff; --purple-dim:rgba(180,139,255,.13);
+      --teal:#2dd4bf; --orange:#fb923c;
+      --r:8px; --rl:14px;
+
+      /* Course colors */
+      --c-solidmech:#ff6b7a;
+      --c-materials:#fb923c;
+      --c-physics:#b48bff;
+      --c-calculus:#4ade88;
+      --c-ode:#6c8fff;
+      --c-drawing:#2dd4bf;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);
+      min-height:100vh;font-size:14px;overflow-x:hidden}
+
+    /* ── SUBTLE GRID BACKGROUND ─────────────────────── */
+    body::before{content:'';position:fixed;inset:0;
+      background-image:linear-gradient(var(--border-s) 1px,transparent 1px),
+                       linear-gradient(90deg,var(--border-s) 1px,transparent 1px);
+      background-size:40px 40px;opacity:.35;pointer-events:none;z-index:0}
+
+    /* ── HEADER ────────────────────────────────────── */
+    header{background:rgba(17,17,24,.92);backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);padding:0 20px;
+      display:flex;align-items:center;justify-content:space-between;height:56px;
+      position:sticky;top:0;z-index:100}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-icon{width:32px;height:32px;
+      background:linear-gradient(135deg,var(--accent),var(--purple));
+      border-radius:10px;display:flex;align-items:center;justify-content:center;
+      font-size:16px;box-shadow:0 0 16px rgba(108,143,255,.4)}
+    .logo-name{font-family:'Space Mono',monospace;font-weight:700;font-size:14px;
+      background:linear-gradient(135deg,var(--accent),var(--purple));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
+    .logo-sub{font-size:9px;color:var(--muted);font-weight:400;letter-spacing:.5px;margin-top:1px}
+
+    .hdr-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+
+    /* ── TABS ───────────────────────────────────────── */
+    .main-tabs{display:flex;gap:2px;background:var(--surface2);
+      border-bottom:1px solid var(--border);padding:0 20px}
+    .main-tab{padding:10px 18px;font-size:12px;font-weight:600;cursor:pointer;
+      background:none;border:none;color:var(--muted);font-family:'Heebo',sans-serif;
+      border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px}
+    .main-tab:hover{color:var(--text)}
+    .main-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+    /* ── BUTTONS ────────────────────────────────────── */
+    .btn{padding:5px 11px;border-radius:var(--r);border:1px solid var(--border);
+      background:var(--surface2);color:var(--text);font-family:'Heebo',sans-serif;
+      font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;
+      gap:5px;transition:all .15s;white-space:nowrap;position:relative;z-index:1}
+    .btn:hover{background:var(--surface3);border-color:var(--accent);color:var(--accent)}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--purple));
+      border-color:transparent;color:#fff;font-weight:600}
+    .btn-primary:hover{opacity:.9;color:#fff;box-shadow:0 0 20px rgba(108,143,255,.35)}
+    .btn-danger{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+    .btn-ghost{background:transparent;border-color:transparent}
+    .btn-ghost:hover{background:var(--surface2);border-color:var(--border);color:var(--text)}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+
+    /* ── STATS ──────────────────────────────────────── */
+    .stats-bar{background:rgba(17,17,24,.8);border-bottom:1px solid var(--border);
+      padding:10px 20px;display:flex;gap:24px;overflow-x:auto;position:relative;z-index:1}
+    .stat{display:flex;align-items:center;gap:8px;flex-shrink:0;cursor:default}
+    .stat-dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 6px currentColor}
+    .stat-val{font-family:'Space Mono',monospace;font-weight:700;font-size:18px}
+    .stat-lbl{font-size:10px;color:var(--muted);letter-spacing:.3px}
+
+    /* ── TOOLBAR ────────────────────────────────────── */
+    .toolbar{padding:10px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+      border-bottom:1px solid var(--border);background:rgba(17,17,24,.6);
+      backdrop-filter:blur(10px);position:relative;z-index:1}
+    select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+      padding:5px 9px;border-radius:var(--r);font-family:'Heebo',sans-serif;font-size:12px;
+      cursor:pointer;outline:none}
+    select:focus{border-color:var(--accent)}
+    .search-box{flex:1;min-width:180px;max-width:280px;position:relative}
+    .search-box input{width:100%;background:var(--surface2);border:1px solid var(--border);
+      color:var(--text);padding:5px 10px 5px 28px;border-radius:var(--r);
+      font-family:'Heebo',sans-serif;font-size:12px;outline:none;transition:border-color .15s}
+    .search-box input:focus{border-color:var(--accent)}
+    .si{position:absolute;left:9px;top:50%;transform:translateY(-50%);
+      color:var(--muted);font-size:12px;pointer-events:none}
+
+    /* ── MAIN ───────────────────────────────────────── */
+    #viewTasks,#viewSchedule{position:relative;z-index:1}
+    main{padding:16px 20px}
+
+    /* ── TABLE ──────────────────────────────────────── */
+    .table-wrap{border:1px solid var(--border);border-radius:var(--rl);
+      overflow:hidden;background:var(--surface)}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--surface2);padding:9px 12px;text-align:right;
+      font-weight:600;font-size:10px;letter-spacing:.6px;text-transform:uppercase;
+      color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+    tbody tr{border-bottom:1px solid var(--border-s);transition:background .12s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:var(--surface2)}
+    tbody tr.overdue-row{background:rgba(255,107,122,.04)}
+    td{padding:10px 12px;vertical-align:middle}
+
+    .task-title{font-weight:500;font-size:13px}
+    .task-notes{font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* ── COURSE PILL (improved) ─────────────────────── */
+    .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+      border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;
+      border:1px solid transparent;letter-spacing:.2px;
+      transition:filter .15s}
+    .pill:hover{filter:brightness(1.15)}
+    .pill-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+
+    .type-badge{display:inline-block;padding:2px 7px;border-radius:5px;
+      font-size:10px;font-weight:700;letter-spacing:.4px}
+    .type-academic{background:var(--accent-dim);color:var(--accent)}
+    .type-personal{background:var(--purple-dim);color:var(--purple)}
+
+    .due-date{font-size:12px;white-space:nowrap;font-weight:500}
+    .due-date.overdue{color:var(--red)}
+    .due-date.soon{color:var(--yellow)}
+    .due-date.ok{color:var(--muted)}
+    .due-date.none{color:var(--subtle)}
+
+    .status-sel{padding:3px 7px;border-radius:20px;font-family:'Heebo',sans-serif;
+      font-size:11px;font-weight:600;cursor:pointer;border:1px solid transparent;
+      outline:none;transition:all .15s;-webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%237070a0'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:left 6px center;padding-left:18px}
+    .s-ns{background:var(--surface3);color:var(--muted);border-color:var(--border)}
+    .s-ip{background:var(--yellow-dim);color:var(--yellow);border-color:var(--yellow)}
+    .s-dn{background:var(--green-dim);color:var(--green);border-color:var(--green)}
+    .s-sb{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+
+    .del-btn{background:none;border:none;color:var(--subtle);cursor:pointer;
+      padding:3px 7px;border-radius:4px;font-size:13px;transition:all .15s}
+    .del-btn:hover{color:var(--red);background:var(--red-dim)}
+
+    /* ── PROGRESS BAR (animated gradient) ──────────── */
+    .prog-wrap{display:flex;align-items:center;gap:7px;min-width:90px}
+    .prog-bar{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+    .prog-fill{height:100%;border-radius:3px;
+      transition:width .5s cubic-bezier(.4,0,.2,1),background .5s ease}
+    .prog-pct{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);
+      white-space:nowrap;width:32px;text-align:right}
+
+    @keyframes completionGlow{
+      0%{box-shadow:none}
+      30%{box-shadow:0 0 20px rgba(74,222,136,.6),inset 0 0 20px rgba(74,222,136,.08)}
+      100%{box-shadow:none}
+    }
+    tbody tr.glow-complete{animation:completionGlow 1s ease-out}
+
+    /* ── ACCORDION ──────────────────────────────────── */
+    .task-row{cursor:pointer}
+    .expand-icon{color:var(--subtle);font-size:9px;transition:transform .22s;
+      flex-shrink:0;margin-right:auto}
+    .task-row.acc-open .expand-icon{transform:rotate(180deg);color:var(--accent)}
+    .acc-row td{padding:0!important;border:none!important}
+    .acc-panel{overflow:hidden;max-height:0;
+      transition:max-height .28s cubic-bezier(.4,0,.2,1)}
+    .acc-panel.open{max-height:700px}
+
+    /* ── CHECKLIST (watermark via bg) ──────────────── */
+    .cl-inner{padding:14px 16px 12px;position:relative;overflow:hidden;
+      border-top:1px solid var(--border-s)}
+    /* inline SVG watermark – absolutely centered */
+    .cl-wm{position:absolute;inset:0;display:flex;align-items:center;
+      justify-content:center;pointer-events:none;overflow:hidden;z-index:0}
+    .cl-wm svg{width:68%;height:68%;opacity:.16}
+    .cl-header,.mode-toggle,.cl-list,.cl-quick,.manual-slider-wrap{position:relative;z-index:1}
+    .cl-header{display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:8px;position:relative}
+    .cl-title{font-size:10px;font-weight:700;color:var(--muted);
+      letter-spacing:.6px;text-transform:uppercase}
+    .cl-status-sel{padding:2px 6px;border-radius:20px;font-family:'Heebo',sans-serif;
+      font-size:10px;font-weight:600;cursor:pointer;border:1px solid transparent;
+      outline:none;-webkit-appearance:none;background:var(--surface3);color:var(--muted)}
+
+    /* Mode toggle */
+    .mode-toggle{display:flex;gap:0;margin-bottom:10px;
+      border:1px solid var(--border);border-radius:6px;overflow:hidden}
+    .mode-btn{flex:1;padding:4px 0;font-size:11px;font-weight:600;border:none;
+      cursor:pointer;font-family:'Heebo',sans-serif;transition:all .15s;
+      background:transparent;color:var(--muted)}
+    .mode-btn.active{background:var(--accent);color:#fff}
+    .mode-btn:not(.active):hover{background:var(--surface3)}
+
+    /* Manual slider */
+    .manual-slider-wrap{display:flex;align-items:center;gap:12px;
+      padding:18px 8px 10px;position:relative}
+    input[type=range].pct-slider{flex:1;accent-color:var(--accent);
+      cursor:pointer;height:4px}
+    .slider-pct-lbl{font-family:'Space Mono',monospace;font-size:18px;
+      font-weight:700;color:var(--accent);width:52px;text-align:center}
+
+    .cl-list{list-style:none;display:flex;flex-direction:column;gap:4px;
+      margin-bottom:0;position:relative}
+    .cl-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;
+      border:1px solid transparent;transition:background .1s;font-size:12px;cursor:default}
+    .cl-item:hover{background:var(--surface3);border-color:var(--border-s)}
+    .cl-item input[type="checkbox"]{width:14px;height:14px;cursor:pointer;
+      accent-color:var(--green);flex-shrink:0}
+    .cl-item.done-item>span{text-decoration:line-through;color:var(--subtle)}
+    .cl-item .cl-del{background:none;border:none;cursor:pointer;
+      color:transparent;font-size:11px;padding:1px 4px;border-radius:3px;
+      transition:all .1s;line-height:1;margin-right:auto;flex-shrink:0}
+    .cl-item:hover .cl-del{color:var(--subtle)}
+    .cl-item:hover .cl-del:hover{color:var(--red);background:var(--red-dim)}
+    .cl-item .sub-weight{font-family:'Space Mono',monospace;font-size:9px;
+      color:var(--subtle);flex-shrink:0;opacity:.7;
+      background:var(--surface3);border-radius:4px;padding:1px 4px}
+    .cl-empty{font-size:12px;color:var(--subtle);padding:4px 8px}
+    .cl-quick{display:flex;align-items:center;gap:6px;border-top:1px solid var(--border-s);
+      margin-top:8px;padding-top:8px;position:relative}
+    .cl-quick-icon{color:var(--subtle);font-size:13px;flex-shrink:0}
+    .cl-quick input{flex:1;background:transparent;border:none;outline:none;
+      color:var(--text);font-family:'Heebo',sans-serif;font-size:12px;padding:2px 0}
+    .cl-quick input::placeholder{color:var(--subtle)}
+
+    /* ── DEFAULTS EDITOR ────────────────────────────── */
+    #viewDefaults{padding:16px 20px;position:relative;z-index:1}
+    .def-top-bar{display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:16px}
+    .def-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+    .def-card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--rl);padding:14px;transition:border-color .15s}
+    .def-card:hover{border-color:var(--accent)}
+    .def-card-head{display:flex;align-items:flex-start;justify-content:space-between;
+      margin-bottom:10px}
+    .def-card-name{font-weight:700;font-size:13px;margin-bottom:2px}
+    .def-card-meta{font-size:10px;color:var(--muted)}
+    .def-sub-list{list-style:none;display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+    .def-sub-row{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+    .def-sub-w{font-family:'Space Mono',monospace;font-size:9px;
+      color:var(--subtle);margin-right:auto}
+    .def-card-actions{display:flex;gap:4px;flex-shrink:0}
+
+    /* Category edit modal sub-list */
+    .cat-sub-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+    .cat-sub-row .form-input{font-size:12px;padding:5px 8px}
+    .cat-w-total{font-family:'Space Mono',monospace;font-size:11px;margin-top:4px}
+
+    /* ── EMPTY STATE ────────────────────────────────── */
+    .empty-state{text-align:center;padding:50px 20px;color:var(--muted)}
+    .empty-icon{font-size:36px;margin-bottom:10px}
+    .empty-title{font-size:15px;font-weight:600;margin-bottom:5px}
+    .empty-sub{font-size:12px}
+
+    /* ── SYNC DOT ───────────────────────────────────── */
+    .sync-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+    .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+      box-shadow:0 0 5px var(--green)}
+    .sync-dot.spin{background:var(--yellow);box-shadow:0 0 5px var(--yellow);
+      animation:pulse 1s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* ════════════════════════════════════════════════
+       SCHEDULE / מערכת שעות
+    ════════════════════════════════════════════════ */
+    #viewSchedule{padding:16px 20px}
+
+    .sched-header{display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:14px}
+    .sched-title{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;
+      color:var(--text)}
+
+    .sched-grid-wrap{overflow-x:auto;border:1px solid var(--border);
+      border-radius:var(--rl);background:var(--surface)}
+    .sched-grid{display:grid;min-width:720px;
+      grid-template-columns:54px repeat(6,1fr);
+      position:relative}
+
+    /* day headers */
+    .sched-day-hdr{background:var(--surface2);padding:8px 4px;text-align:center;
+      font-size:11px;font-weight:700;color:var(--muted);
+      border-bottom:1px solid var(--border);letter-spacing:.4px;
+      border-right:1px solid var(--border-s)}
+    .sched-day-hdr:last-child{border-right:none}
+    .sched-day-hdr.today{color:var(--accent)}
+
+    /* time label column */
+    .sched-time-lbl{padding:0 6px;text-align:center;font-family:'Space Mono',monospace;
+      font-size:9px;color:var(--subtle);border-right:1px solid var(--border-s);
+      display:flex;align-items:flex-start;justify-content:center;padding-top:2px;
+      background:var(--surface2)}
+
+    /* cell */
+    .sched-cell{border-right:1px solid var(--border-s);border-bottom:1px solid var(--border-s);
+      height:32px;position:relative;cursor:pointer;transition:background .1s}
+    .sched-cell:last-child{border-right:none}
+    .sched-cell:nth-child(even){background:rgba(255,255,255,.008)}
+    .sched-cell:hover{background:var(--accent-dim)}
+    .sched-cell.hour-start{border-top:1px solid var(--border)}
+
+    /* blocks */
+    .sched-block{position:absolute;left:2px;right:2px;border-radius:6px;
+      font-size:11px;font-weight:600;padding:3px 7px;overflow:hidden;
+      cursor:pointer;z-index:2;transition:filter .15s,transform .1s;
+      border:1px solid transparent;line-height:1.3;
+      display:flex;flex-direction:column;justify-content:center}
+    .sched-block:hover{filter:brightness(1.15);transform:scale(1.01)}
+    .sched-block-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      font-size:11px;font-weight:700}
+    .sched-block-course{font-size:9px;opacity:.75;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;font-weight:400}
+    .sched-block .blk-del{position:absolute;top:2px;left:3px;font-size:9px;
+      background:rgba(0,0,0,.3);border:none;border-radius:3px;
+      color:rgba(255,255,255,.7);cursor:pointer;padding:1px 3px;
+      opacity:0;transition:opacity .15s;line-height:1}
+    .sched-block:hover .blk-del{opacity:1}
+
+    /* ── MODAL ──────────────────────────────────────── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);
+      backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;
+      justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:all .2s}
+    .modal-overlay.open{opacity:1;visibility:visible}
+    .modal{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--rl);padding:22px;width:100%;max-width:480px;
+      transform:translateY(-12px);transition:transform .2s;
+      box-shadow:0 24px 64px rgba(0,0,0,.6)}
+    .modal-overlay.open .modal{transform:translateY(0)}
+    .modal-title{font-size:15px;font-weight:700;margin-bottom:18px}
+    .modal-footer{display:flex;gap:7px;justify-content:flex-end;margin-top:18px}
+    .form-group{margin-bottom:12px}
+    .form-label{display:block;font-size:11px;font-weight:600;color:var(--muted);
+      margin-bottom:4px;letter-spacing:.3px}
+    .form-input{width:100%;background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--r);color:var(--text);padding:7px 10px;
+      font-family:'Heebo',sans-serif;font-size:12px;outline:none;transition:border-color .15s}
+    .form-input:focus{border-color:var(--accent)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .info-box{font-size:11px;color:var(--muted);padding:8px 10px;
+      background:var(--yellow-dim);border:1px solid rgba(251,191,36,.3);
+      border-radius:var(--r);margin-bottom:12px;line-height:1.6}
+    .tab-bar{display:flex;gap:6px;margin-bottom:14px}
+    .tab-btn{flex:1;padding:6px;border-radius:var(--r);border:1px solid var(--border);
+      background:var(--surface2);color:var(--muted);font-family:'Heebo',sans-serif;
+      font-size:12px;cursor:pointer;transition:all .15s}
+    .tab-btn.active{background:var(--accent);border-color:var(--accent);
+      color:#fff;font-weight:600}
+
+    /* ── TOAST ──────────────────────────────────────── */
+    .toast-wrap{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+      z-index:2000;display:flex;flex-direction:column;gap:7px}
+    .toast{background:var(--surface3);border:1px solid var(--border);
+      border-radius:var(--r);padding:9px 16px;font-size:12px;font-weight:500;
+      white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);
+      animation:tIn .2s ease}
+    .toast.success{border-color:var(--green);color:var(--green)}
+    .toast.error{border-color:var(--red);color:var(--red)}
+    .toast.info{border-color:var(--accent);color:var(--accent)}
+    @keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚀</div>
+    <div>
+      <div class="logo-name">TripleM</div>
+      <div class="logo-sub">MOODLE MISSION MANAGER</div>
+    </div>
+  </div>
+  <div class="hdr-actions">
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText">טוען...</span>
+    </div>
+    <button class="btn" onclick="openSettings()">⚙️</button>
+    <button class="btn" onclick="openFilterModal()" id="filterBtn">🔧 סינון</button>
+    <button class="btn" id="clearBtn" onclick="clearAndResync()">🗑️ נקה</button>
+    <button class="btn" id="syncBtn" onclick="triggerSync()">🔄 סנכרן</button>
+    <button class="btn" onclick="openAddWebwork()">🔢 WW</button>
+    <button class="btn btn-primary" onclick="openAddTask()">+ משימה</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="main-tabs">
+  <button class="main-tab active" id="tabTasks"    onclick="switchTab('tasks')">📋 לוח משימות</button>
+  <button class="main-tab"        id="tabSched"    onclick="switchTab('schedule')">📅 מערכת שעות</button>
+  <button class="main-tab"        id="tabDefaults" onclick="switchTab('defaults')">✏️ ברירות מחדל</button>
+</div>
+
+<!-- ════ TASKS VIEW ════ -->
+<div id="viewTasks">
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-dot" style="color:var(--muted);background:var(--muted)"></div>
+      <div><div class="stat-val" id="st-total">—</div><div class="stat-lbl">סה"כ</div></div></div>
+    <div class="stat"><div class="stat-dot" style="color:var(--accent);background:var(--accent)"></div>
+      <div><div class="stat-val" id="st-visible">—</div><div class="stat-lbl">אחרי סינון</div></div></div>
+    <div class="stat"><div class="stat-dot" style="color:var(--red);background:var(--red)"></div>
+      <div><div class="stat-val" id="st-overdue">—</div><div class="stat-lbl">פגי תוקף</div></div></div>
+    <div class="stat"><div class="stat-dot" style="color:var(--yellow);background:var(--yellow)"></div>
+      <div><div class="stat-val" id="st-week">—</div><div class="stat-lbl">עד שבוע</div></div></div>
+    <div class="stat"><div class="stat-dot" style="color:var(--yellow);background:var(--yellow)"></div>
+      <div><div class="stat-val" id="st-prog">—</div><div class="stat-lbl">בתהליך</div></div></div>
+    <div class="stat"><div class="stat-dot" style="color:var(--green);background:var(--green)"></div>
+      <div><div class="stat-val" id="st-done">—</div><div class="stat-lbl">הוגשו/הושלמו</div></div></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="si">🔍</span>
+      <input type="text" id="searchInput" placeholder="חפש משימה..." oninput="filterTable()"/>
+    </div>
+    <select id="fStatus" onchange="filterTable()">
+      <option value="">כל הסטטוסים</option>
+      <option value="not_started">לא התחלתי</option>
+      <option value="in_progress">חלקית</option>
+      <option value="done">הושלמה</option>
+      <option value="submitted">הוגשה</option>
+    </select>
+    <select id="fType" onchange="filterTable()">
+      <option value="">כל הסוגים</option>
+      <option value="academic">אקדמי</option>
+      <option value="personal">אישי</option>
+    </select>
+    <select id="fCourse" onchange="filterTable()">
+      <option value="">כל הקורסים</option>
+    </select>
+    <select id="fSort" onchange="filterTable()">
+      <option value="due_date">מיון: תאריך</option>
+      <option value="status">מיון: סטטוס</option>
+      <option value="course">מיון: קורס</option>
+      <option value="title">מיון: שם</option>
+    </select>
+    <button class="btn btn-ghost" onclick="clearFilters()">✕</button>
+  </div>
+
+  <main>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>📝 משימה</th><th>📚 קורס</th><th>סוג</th>
+          <th>📅 הגשה</th><th>📊 התקדמות</th>
+          <th style="width:50px;text-align:center">⚙️</th>
+        </tr></thead>
+        <tbody id="taskTbody">
+          <tr><td colspan="6"><div class="empty-state">
+            <div class="empty-icon">⏳</div><div class="empty-title">טוען...</div>
+          </div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- ════ SCHEDULE VIEW ════ -->
+<div id="viewSchedule" style="display:none">
+  <div class="sched-header">
+    <div class="sched-title">📅 מערכת שעות שבועית</div>
+    <button class="btn btn-primary" onclick="openAddBlock()">+ הוסף פעילות</button>
+  </div>
+  <div class="sched-outer">
+    <div id="schedGrid"></div>
+  </div>
+</div>
+
+<!-- DEFAULTS EDITOR -->
+<div id="viewDefaults" style="display:none">
+  <div class="def-top-bar">
+    <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:14px;color:var(--text)">
+      ✏️ ברירות מחדל לתתי-משימות
+    </div>
+    <button class="btn btn-primary" onclick="openAddCategory()">+ קטגוריה חדשה</button>
+  </div>
+  <!-- Unknown tasks banner -->
+  <div id="unknownBanner" style="display:none;margin:0 0 14px 0;padding:10px 14px;
+    background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.35);
+    border-radius:8px;font-size:12px;color:var(--yellow);line-height:1.6">
+    <span id="unknownBannerText"></span>
+    <span style="float:left;color:var(--muted);font-size:11px" id="unknownSample"></span>
+  </div>
+  <div class="def-grid" id="defGrid">
+    <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">טוען...</div></div>
+  </div>
+</div>
+
+<!-- ════ MODALS ════ -->
+
+<!-- CATEGORY EDIT MODAL -->
+<div class="modal-overlay" id="catModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title" id="catModalTitle">✏️ עריכת קטגוריה</div>
+    <input type="hidden" id="catId"/>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label class="form-label">שם הקטגוריה *</label>
+        <input class="form-input" id="catName" type="text" placeholder="שם הקורס / קטגוריה"/>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label class="form-label">סוג</label>
+        <select class="form-input" id="catType" onchange="_updateCatTypeUI()">
+          <option value="academic">📘 אקדמי</option>
+          <option value="personal">⭐ אישי</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1">
+        <label class="form-label">צבע</label>
+        <input class="form-input" id="catColor" type="color" style="padding:2px 4px;height:36px"/>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label class="form-label">אייקון (emoji)</label>
+        <input class="form-input" id="catIcon" type="text" placeholder="📘" maxlength="4"
+               style="font-size:18px;text-align:center"/>
+      </div>
+    </div>
+    <!-- Course ID – visible only for academic type -->
+    <div id="catCourseIdGroup" class="form-group" style="display:none">
+      <label class="form-label">מזהה קורס (לשיוך מטלות)</label>
+      <input class="form-input" id="catCourseId" type="text"
+             placeholder="לדוגמה: 01040043 או 12345 (ניתן לשים כמה בפסיק)"/>
+      <div style="font-size:11px;color:var(--subtle);margin-top:4px;line-height:1.6">
+        💡 <strong>איך מוצאים?</strong> השתמש בכלי <strong>🔍 אבחן</strong> בהגדרות — הוא יראה את כל הקורסים והמזהים שלהם.
+        ניתן להכניס כמה מזהים מופרדים בפסיקים: <code style="color:var(--accent)">01040043, 12345</code>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>תתי-משימות ברירת מחדל</span>
+        <span class="cat-w-total" id="catWTotal" style="color:var(--muted)">סה"כ: 0%</span>
+      </label>
+      <div id="catSubList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+      <button class="btn btn-ghost" onclick="addCatSubRow()"
+              style="width:100%;font-size:12px;margin-top:2px">＋ הוסף שורה</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('catModal')">ביטול</button>
+      <button class="btn btn-primary" onclick="saveCategory()">💾 שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TASK -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">➕ הוסף משימה אישית</div>
+    <div class="form-group">
+      <label class="form-label">שם המשימה *</label>
+      <input class="form-input" id="newTitle" type="text" placeholder="לדוגמה: ריצה 5 ק״מ"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">קטגוריה</label>
+        <input class="form-input" id="newCourse" type="text" placeholder="ספורט, אישי..."/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תאריך יעד</label>
+        <input class="form-input" id="newDueDate" type="datetime-local"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">הערות</label>
+      <input class="form-input" id="newNotes" type="text" placeholder="אופציונלי"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">סטטוס</label>
+      <select class="form-input" id="newStatus">
+        <option value="not_started">לא התחלתי</option>
+        <option value="in_progress">הושלמה חלקית</option>
+        <option value="done">הושלמה</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('addModal')">ביטול</button>
+      <button class="btn btn-primary" onclick="submitAddTask()">הוסף</button>
+    </div>
+  </div>
+</div>
+
+<!-- WEBWORK -->
+<div class="modal-overlay" id="wwModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">🔢 הוסף תרגילי WebWork</div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="wwTabImg" onclick="wwTab('img')">📷 תמונה (AI)</button>
+      <button class="tab-btn" id="wwTabMan" onclick="wwTab('man')">✏️ ידנית</button>
+    </div>
+    <div id="wwPaneImg">
+      <div class="info-box" id="wwModeBox">📸 צלם מסך WeBWorK → <span id="wwModeLabel">מחלץ טקסט</span> יחלץ HW ויסנן Tirgul.</div>
+      <div class="form-group">
+        <label class="form-label">קורס</label>
+        <select class="form-input" id="wwImgCourse">
+          <option>חשבון דיפרונציאלי ואינטגרלי 2מ1</option><option>פיסיקה 2</option>
+          <option>מכניקת המוצקים</option><option>מבוא להנדסת חומרים לתעופה וחלל</option>
+          <option>משוואות דיפרונציאליות רגילות/ח</option><option>שרטוט הנדסי ממוחשב</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תמונת מסך</label>
+        <input type="file" class="form-input" id="wwFile" accept="image/*"
+          style="padding:5px" onchange="previewWW(this)"/>
+      </div>
+      <div id="wwPreview" style="display:none;margin-bottom:10px">
+        <img id="wwPreviewImg" style="max-width:100%;border-radius:6px;border:1px solid var(--border)"/>
+      </div>
+      <div id="wwResult" style="font-size:12px;color:var(--muted);min-height:18px"></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('wwModal')">ביטול</button>
+        <button class="btn btn-primary" id="wwImgBtn" onclick="submitWWImage()">🤖 חלץ והוסף</button>
+      </div>
+    </div>
+    <div id="wwPaneMan" style="display:none">
+      <div class="form-group">
+        <label class="form-label">שם (HW03)</label>
+        <input class="form-input" id="wwManName" type="text" placeholder="HW03"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">קורס</label>
+        <select class="form-input" id="wwManCourse">
+          <option>חשבון דיפרונציאלי ואינטגרלי 2מ1</option><option>פיסיקה 2</option>
+          <option>מכניקת המוצקים</option><option>מבוא להנדסת חומרים לתעופה וחלל</option>
+          <option>משוואות דיפרונציאליות רגילות/ח</option><option>שרטוט הנדסי ממוחשב</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תאריך סגירה</label>
+        <input class="form-input" id="wwManDate" type="datetime-local"/>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('wwModal')">ביטול</button>
+        <button class="btn btn-primary" onclick="submitWWManual()">הוסף</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SCHEDULE BLOCK -->
+<div class="modal-overlay" id="schedModal">
+  <div class="modal">
+    <div class="modal-title">📅 הוסף פעילות למערכת</div>
+    <div class="form-group">
+      <label class="form-label">שם הפעילות *</label>
+      <input class="form-input" id="blkTitle" type="text" placeholder="הרצאה / תרגיל / ריצה..."/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">יום</label>
+        <select class="form-input" id="blkDay">
+          <option value="0">ראשון</option><option value="1">שני</option>
+          <option value="2">שלישי</option><option value="3">רביעי</option>
+          <option value="4">חמישי</option><option value="5">שישי</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">שעת התחלה</label>
+        <select class="form-input" id="blkStart"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">משך (שעות)</label>
+        <select class="form-input" id="blkDur">
+          <option value="1">30 דקות</option><option value="2" selected>שעה</option>
+          <option value="3">שעה וחצי</option><option value="4">שעתיים</option>
+          <option value="6">3 שעות</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">סוג</label>
+        <select class="form-input" id="blkType" onchange="updateBlkCourse()">
+          <option value="academic">אקדמי 📘</option>
+          <option value="personal">אישי ⭐</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="blkCourseGrp">
+      <label class="form-label">קורס</label>
+      <select class="form-input" id="blkCourse">
+        <option value="">בחר קורס...</option>
+        <option>מכניקת המוצקים</option><option>פיסיקה 2</option>
+        <option>חשבון דיפרונציאלי ואינטגרלי 2מ1</option>
+        <option>משוואות דיפרונציאליות רגילות/ח</option>
+        <option>מבוא להנדסת חומרים לתעופה וחלל</option>
+        <option>שרטוט הנדסי ממוחשב</option>
+      </select>
+    </div>
+    <div class="form-group" id="blkColorGrp" style="display:none">
+      <label class="form-label">צבע</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="blkColorPicker"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('schedModal')">ביטול</button>
+      <button class="btn btn-primary" onclick="submitBlock()">הוסף</button>
+    </div>
+  </div>
+</div>
+
+<!-- DYNAMIC FILTER -->
+<div class="modal-overlay" id="filterModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">🔧 סינון דינמי</div>
+    <div class="info-box">שורה אחת = ביטוי להסתיר. לדוגמה: <code>תרגול</code>, <code>גל פרידמן</code></div>
+    <div class="form-group">
+      <label class="form-label">ביטויים להסתרה</label>
+      <textarea class="form-input" id="filterWords" rows="7"
+        style="resize:vertical;font-size:12px;font-family:monospace"
+        placeholder="תרגול&#10;גל פרידמן&#10;תיבת הגשה"></textarea>
+    </div>
+    <div id="filterCount" style="font-size:11px;color:var(--muted)"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="clearFiltersDB()">נקה הכל</button>
+      <button class="btn" onclick="closeModal('filterModal')">סגור</button>
+      <button class="btn btn-primary" onclick="saveFilters()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">⚙️ הגדרות</div>
+    <div class="info-box">🔒 פרטים נשמרים מקומית בלבד.</div>
+    <div class="form-group">
+      <label class="form-label">קישור iCal</label>
+      <input class="form-input" id="sIcal" type="text" placeholder="https://moodle.technion.ac.il/calendar/..."/>
+    </div>
+    <div id="sStatus" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+    <div class="form-group" style="margin-top:14px">
+      <label class="form-label">🤖 Anthropic API Key <span style="font-size:10px;color:var(--muted)">(נדרש להעלאת תמונות WebWork)</span></label>
+      <input class="form-input" id="sApiKey" type="password" placeholder="sk-ant-..."/>
+      <div id="sApiStatus" style="font-size:11px;color:var(--muted);margin-top:3px"></div>
+    </div>
+    <div id="debugOut" style="display:none;margin-top:12px;max-height:220px;overflow-y:auto;
+      font-size:11px;font-family:monospace;background:var(--surface3);padding:8px;
+      border-radius:6px;border:1px solid var(--border);line-height:1.7"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="runDebug()">🔍 אבחן</button>
+      <button class="btn" onclick="testIcal()">בדוק קישור</button>
+      <button class="btn" onclick="closeModal('settingsModal')">ביטול</button>
+      <button class="btn btn-primary" onclick="saveSettings()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API = (()=>{
+  // Works in cloud (same origin) AND locally (localhost:5000)
+  if (window.location.port === '5000' || window.location.hostname !== 'localhost') {
+    return window.location.origin + '/api';
+  }
+  return 'http://localhost:5000/api';
+})();
+let allTasks = [], dynFilters = [], taskSubtasks = {}, openAccordions = new Set();
+let scheduleBlocks = [];
+
+const COURSE_COLORS = {
+  'מכניקת המוצקים':'#ff6b7a',
+  'מבוא להנדסת חומרים לתעופה וחלל':'#fb923c',
+  'פיסיקה 2':'#b48bff',
+  'חשבון דיפרונציאלי ואינטגרלי 2מ1':'#4ade88',
+  'משוואות דיפרונציאליות רגילות/ח':'#6c8fff',
+  'שרטוט הנדסי ממוחשב':'#2dd4bf',
+};
+const PERSONAL_COLORS = ['#94a3b8','#7dd3fc','#c4b5fd','#f9a8d4','#86efac','#fcd34d'];
+
+/* SVG watermarks – centered, clear artwork per course */
+const COURSE_WM = {
+  'פיסיקה 2':
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='white' stroke-width='2.5'><circle cx='100' cy='100' r='16' fill='white'/><circle cx='100' cy='100' r='46' stroke-dasharray='8 5'/><circle cx='100' cy='100' r='78' stroke-dasharray='8 5'/><line x1='100' y1='8' x2='100' y2='81'/>  <line x1='190' y1='100' x2='119' y2='100'/><line x1='100' y1='190' x2='100' y2='119'/><line x1='8' y1='100' x2='81' y2='100'/><line x1='161' y1='39' x2='115' y2='85'/><line x1='161' y1='161' x2='115' y2='115'/><line x1='39' y1='161' x2='85' y2='115'/><line x1='39' y1='39' x2='85' y2='85'/></svg>`,
+
+  'מכניקת המוצקים':
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 160' fill='none' stroke='white' stroke-width='2'><rect x='20' y='74' width='160' height='16' fill='white' fill-opacity='.3'/><polygon points='20,90 4,122 36,122' fill='white' fill-opacity='.2'/><polygon points='180,90 164,122 196,122' fill='white' fill-opacity='.2'/><line x1='4' y1='124' x2='36' y2='124'/><line x1='164' y1='124' x2='196' y2='124'/><line x1='20' y1='40' x2='180' y2='40'/><line x1='46' y1='40' x2='46' y2='70'/><line x1='41' y1='64' x2='46' y2='74'/><line x1='51' y1='64' x2='46' y2='74'/><line x1='78' y1='40' x2='78' y2='70'/><line x1='73' y1='64' x2='78' y2='74'/><line x1='83' y1='64' x2='78' y2='74'/><line x1='100' y1='38' x2='100' y2='70'/><line x1='95' y1='64' x2='100' y2='74'/><line x1='105' y1='64' x2='100' y2='74'/><line x1='122' y1='40' x2='122' y2='70'/><line x1='117' y1='64' x2='122' y2='74'/><line x1='127' y1='64' x2='122' y2='74'/><line x1='154' y1='40' x2='154' y2='70'/><line x1='149' y1='64' x2='154' y2='74'/><line x1='159' y1='64' x2='154' y2='74'/></svg>`,
+
+  'חשבון דיפרונציאלי ואינטגרלי 2מ1':
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 170' fill='none' stroke='white' stroke-width='2'><line x1='22' y1='14' x2='22' y2='148'/><line x1='22' y1='148' x2='184' y2='148'/><path d='M28 128 C58 128 70 35 98 62 S152 112 178 34'/><path d='M28 128 C58 128 70 35 98 62 S152 112 178 34 L178 148 L28 148Z' fill='white' fill-opacity='.1' stroke='none'/><path d='M96 8 Q90 8 88 14 L82 80' stroke-width='4'/><path d='M104 162 Q110 162 112 156 L118 90' stroke-width='4'/></svg>`,
+
+  'משוואות דיפרונציאליות רגילות/ח':
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='white' stroke-width='2.5'><circle cx='100' cy='100' r='8' fill='white'/><path d='M100 100 Q110 84 124 100 Q136 116 124 130 Q110 144 96 132 Q80 118 88 104 Q94 90 106 82 Q118 72 132 84 Q146 96 138 116 Q130 134 112 138 Q90 142 76 128 Q62 114 70 96 Q78 76 100 70'/></svg>`,
+
+  'שרטוט הנדסי ממוחשב':
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 170' fill='none' stroke='white' stroke-width='2'><rect x='28' y='24' width='108' height='84'/><line x1='28' y1='66' x2='136' y2='66'/><line x1='82' y1='24' x2='82' y2='108'/><rect x='150' y='38' width='38' height='54' fill='white' fill-opacity='.08'/><line x1='150' y1='65' x2='188' y2='65'/><line x1='169' y1='38' x2='169' y2='92'/><line x1='8' y1='118' x2='192' y2='118'/><line x1='175' y1='14' x2='193' y2='156' stroke-width='1.5'/><line x1='28' y1='118' x2='136' y2='118'/><line x1='28' y1='113' x2='28' y2='123'/><line x1='136' y1='113' x2='136' y2='123'/></svg>`,
+
+  'מבוא להנדסת חומרים לתעופה וחלל':
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 180'><g fill='white' stroke='white' stroke-width='1'><circle cx='40' cy='36' r='7'/><circle cx='100' cy='36' r='7'/><circle cx='160' cy='36' r='7'/><circle cx='70' cy='78' r='7'/><circle cx='130' cy='78' r='7'/><circle cx='40' cy='120' r='7'/><circle cx='100' cy='120' r='7'/><circle cx='160' cy='120' r='7'/><circle cx='70' cy='162' r='7'/><circle cx='130' cy='162' r='7'/><g fill='none' stroke-width='1.5' opacity='.6'><line x1='40' y1='36' x2='100' y2='36'/><line x1='100' y1='36' x2='160' y2='36'/><line x1='40' y1='36' x2='70' y2='78'/><line x1='100' y1='36' x2='70' y2='78'/><line x1='100' y1='36' x2='130' y2='78'/><line x1='160' y1='36' x2='130' y2='78'/><line x1='70' y1='78' x2='40' y2='120'/><line x1='70' y1='78' x2='100' y2='120'/><line x1='130' y1='78' x2='100' y2='120'/><line x1='130' y1='78' x2='160' y2='120'/><line x1='40' y1='120' x2='100' y2='120'/><line x1='100' y1='120' x2='160' y2='120'/><line x1='40' y1='120' x2='70' y2='162'/><line x1='100' y1='120' x2='70' y2='162'/><line x1='100' y1='120' x2='130' y2='162'/><line x1='160' y1='120' x2='130' y2='162'/><line x1='70' y1='162' x2='130' y2='162'/></g></g></svg>`,
+};
+
+function courseColor(n){ return COURSE_COLORS[n] || '#6c8fff'; }
+function hex2rgba(h,a){
+  try{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;}catch{return 'rgba(108,143,255,'+a+')';}
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── TABS ─────────────────────────────────────────── */
+function switchTab(tab){
+  document.getElementById('viewTasks').style.display    = tab==='tasks'    ? '' : 'none';
+  document.getElementById('viewSchedule').style.display = tab==='schedule' ? '' : 'none';
+  document.getElementById('viewDefaults').style.display = tab==='defaults' ? '' : 'none';
+  document.getElementById('tabTasks').className    = 'main-tab'+(tab==='tasks'    ?' active':'');
+  document.getElementById('tabSched').className    = 'main-tab'+(tab==='schedule' ?' active':'');
+  document.getElementById('tabDefaults').className = 'main-tab'+(tab==='defaults' ?' active':'');
+  if(tab==='schedule') renderSchedule();
+  if(tab==='defaults') loadDefaults();
+}
+
+/* ── INIT ─────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  buildTimeSelect();
+  buildColorPicker();
+  await Promise.all([loadFilters(),loadTasks(),loadStats(),loadCourses(),loadSyncLog()]);
+});
+
+/* ── FILTERS ──────────────────────────────────────── */
+async function loadFilters(){
+  try{
+    const rows=await fetch(`${API}/filters`).then(r=>r.json());
+    dynFilters=rows.map(r=>r.filter_text.toLowerCase());
+    document.getElementById('filterWords').value=rows.map(r=>r.filter_text).join('\n');
+    updateFilterBtn();
+  }catch(e){}
+}
+function updateFilterBtn(){
+  document.getElementById('filterBtn').textContent=
+    dynFilters.length ? `🔧 סינון (${dynFilters.length})` : '🔧 סינון';
+  document.getElementById('filterCount').textContent=
+    dynFilters.length ? `${dynFilters.length} מסננים פעילים` : '';
+}
+async function saveFilters(){
+  const words=document.getElementById('filterWords').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  await fetch(`${API}/filters`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:words})});
+  dynFilters=words.map(w=>w.toLowerCase());
+  updateFilterBtn(); closeModal('filterModal'); renderTable(allTasks);
+  showToast(`✅ ${words.length} מסננים`,'success');
+}
+async function clearFiltersDB(){
+  await fetch(`${API}/filters`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:[]})});
+  dynFilters=[]; document.getElementById('filterWords').value='';
+  updateFilterBtn(); renderTable(allTasks); showToast('מסננים נוקו','info');
+}
+function openFilterModal(){
+  document.getElementById('filterWords').value=dynFilters.join('\n');
+  openModal('filterModal');
+}
+function applyDynFilter(tasks){
+  if(!dynFilters.length) return tasks;
+  return tasks.filter(t=>{
+    const txt=`${t.title} ${t.course||''} ${t.notes||''}`.toLowerCase();
+    return !dynFilters.some(f=>txt.includes(f));
+  });
+}
+
+/* ── DATA ─────────────────────────────────────────── */
+async function loadTasks(){
+  try{
+    const sort=document.getElementById('fSort').value;
+    const q=new URLSearchParams({sort});
+    const status=document.getElementById('fStatus').value;
+    const type=document.getElementById('fType').value;
+    const course=document.getElementById('fCourse').value;
+    if(status) q.set('status',status);
+    if(type)   q.set('type',type);
+    if(course) q.set('course',course);
+    allTasks=await fetch(`${API}/tasks?${q}`).then(r=>r.json());
+    allTasks.forEach(t=>{ try{taskSubtasks[t.id]=JSON.parse(t.subtasks||'[]');}catch{taskSubtasks[t.id]=[];} });
+    renderTable(allTasks);
+  }catch(e){ showError('לא ניתן להתחבר לשרת. האם הרצת את app.py?'); }
+}
+async function loadStats(){
+  try{
+    const s=await fetch(`${API}/stats`).then(r=>r.json());
+    document.getElementById('st-total').textContent=s.total;
+    document.getElementById('st-overdue').textContent=s.overdue;
+    document.getElementById('st-week').textContent=s.upcoming_week;
+    document.getElementById('st-prog').textContent=s.in_progress;
+    document.getElementById('st-done').textContent=s.submitted;
+  }catch(e){}
+}
+async function loadCourses(){
+  try{
+    const courses=await fetch(`${API}/courses`).then(r=>r.json());
+    const sel=document.getElementById('fCourse');
+    sel.innerHTML='<option value="">כל הקורסים</option>';
+    courses.forEach(c=>{ const o=document.createElement('option'); o.value=c.course; o.textContent=c.course; sel.appendChild(o); });
+  }catch(e){}
+}
+async function loadSyncLog(){
+  try{
+    const rows=await fetch(`${API}/sync/log`).then(r=>r.json());
+    const dot=document.getElementById('syncDot'), txt=document.getElementById('syncText');
+    if(!rows.length){txt.textContent='לא סונכרן';return;}
+    const last=rows[0];
+    if(last.status==='success'){dot.style.background='var(--green)';dot.style.boxShadow='0 0 5px var(--green)';txt.textContent=`סונכרן ${relTime(new Date(last.synced_at))}`;}
+    else if(last.status==='error'){dot.style.background='var(--red)';txt.textContent='שגיאה';}
+    else{txt.textContent='הגדר iCal';}
+  }catch(e){}
+}
+
+/* ── RENDER ───────────────────────────────────────── */
+function renderTable(tasks){
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  let filtered=applyDynFilter(tasks);
+  if(search) filtered=filtered.filter(t=>t.title.toLowerCase().includes(search)||(t.course||'').toLowerCase().includes(search));
+  document.getElementById('st-visible').textContent=filtered.length;
+  const tbody=document.getElementById('taskTbody');
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state">
+      <div class="empty-icon">📭</div><div class="empty-title">אין משימות</div>
+      <div class="empty-sub">הוסף משימה, סנכרן, או נקה סינון</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=filtered.map(row).join('');
+  openAccordions.forEach(id=>{
+    const panel=document.getElementById(`ap-${id}`);
+    const trow=document.getElementById(`tr-${id}`);
+    if(panel&&taskSubtasks[id]){panel.innerHTML=buildPanel(id);panel.classList.add('open');if(trow)trow.classList.add('acc-open');}
+    else openAccordions.delete(id);
+  });
+}
+
+function calcPct(subs){
+  if(!subs||!subs.length) return 0;
+  const hasW=subs.some(s=>s.weight!=null);
+  if(hasW){
+    const total=subs.reduce((a,s)=>a+(s.weight||0),0);
+    if(!total) return Math.round(subs.filter(s=>s.done).length/subs.length*100);
+    return Math.round(subs.filter(s=>s.done).reduce((a,s)=>a+(s.weight||0),0)/total*100);
+  }
+  return Math.round(subs.filter(s=>s.done).length/subs.length*100);
+}
+function progColor(pct){ if(pct===100) return 'var(--green)'; if(pct>=50) return 'var(--yellow)'; if(pct>0) return 'var(--accent)'; return 'var(--subtle)'; }
+
+function updateProgBar(id){
+  const t=allTasks.find(x=>x.id===id);
+  const mode=t?.progress_mode||'subtasks';
+  const pct=mode==='manual'?(t?.manual_progress||0):calcPct(taskSubtasks[id]||[]);
+  const fill=document.getElementById(`pf-${id}`),txt=document.getElementById(`pp-${id}`);
+  if(fill){fill.style.width=pct+'%';fill.style.background=progColor(pct);}
+  if(txt) txt.textContent=pct+'%';
+  if(pct===100){const tr=document.getElementById(`tr-${id}`);if(tr){tr.classList.add('glow-complete');setTimeout(()=>tr.classList.remove('glow-complete'),1100);}}
+}
+
+
+function buildPanel(tid){
+  const t=allTasks.find(x=>x.id===tid)||{};
+  const subs=taskSubtasks[tid]||[];
+  const done=subs.filter(s=>s.done).length;
+  const mode=t.progress_mode||'subtasks';
+  const manPct=t.manual_progress||0;
+  const color=t.course_color||courseColor(t.course)||'#6c8fff';
+  const sMap={not_started:'s-ns',in_progress:'s-ip',done:'s-dn',submitted:'s-sb'};
+  const status=t.status||'not_started';
+
+  // Inline SVG watermark – centered, opacity via CSS
+  const wmKey=Object.keys(COURSE_WM).find(k=>(t.course||'').includes(k));
+  const wmDiv=wmKey?`<div class="cl-wm" aria-hidden="true">${COURSE_WM[wmKey]}</div>`:'';
+
+  const items=subs.map(s=>`
+    <li class="cl-item${s.done?' done-item':''}" id="cli-${tid}-${s.id}">
+      <input type="checkbox" ${s.done?'checked':''} onclick="event.stopPropagation();toggleCheck(${tid},'${s.id}')"/>
+      <span>${esc(s.text)}</span>
+      ${s.weight!=null?`<span class="sub-weight">${s.weight}%</span>`:''}
+      <button class="cl-del" onclick="event.stopPropagation();delSub(${tid},'${s.id}')" title="מחק">✕</button>
+    </li>`).join('');
+
+  const subtaskContent=`
+    <ul class="cl-list">${items||'<li class="cl-empty">הוסף תתי-משימות למטה</li>'}</ul>
+    <div class="cl-quick">
+      <span class="cl-quick-icon">＋</span>
+      <input type="text" placeholder="הוסף תת-משימה... (Enter)" onclick="event.stopPropagation()"
+        onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addSub(${tid},v);this.value=''}}"/>
+    </div>`;
+
+  const manualContent=`
+    <div class="manual-slider-wrap">
+      <input type="range" class="pct-slider" min="0" max="100" value="${manPct}"
+        oninput="liveManual(${tid},this.value)"
+        onchange="saveManual(${tid},this.value)"
+        onclick="event.stopPropagation()"/>
+      <span class="slider-pct-lbl" id="mpct-${tid}">${manPct}%</span>
+    </div>`;
+
+  return `<div class="cl-inner" style="background:linear-gradient(135deg,${hex2rgba(color,.07)},transparent)">
+    ${wmDiv}
+    <div class="cl-header">
+      <span class="cl-title">${mode==='subtasks'?`תתי-משימות · ${done}/${subs.length}`:'📊 אחוזים ידניים'}</span>
+      <select class="cl-status-sel ${sMap[status]||'s-ns'}" onclick="event.stopPropagation()"
+        onchange="event.stopPropagation();updateStatus(${tid},this.value,this)">
+        <option value="not_started" ${status==='not_started'?'selected':''}>⚪ לא התחלתי</option>
+        <option value="in_progress" ${status==='in_progress'?'selected':''}>🟡 חלקית</option>
+        ${t.type==='academic'
+          ?`<option value="submitted" ${status==='submitted'?'selected':''}>🔵 הוגשה</option>`
+          :`<option value="done" ${status==='done'?'selected':''}>🟢 הושלמה</option>`}
+      </select>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn${mode==='subtasks'?' active':''}"
+              onclick="event.stopPropagation();setMode(${tid},'subtasks')">✓ תתי-משימות</button>
+      <button class="mode-btn${mode==='manual'?' active':''}"
+              onclick="event.stopPropagation();setMode(${tid},'manual')">↔ אחוזים ידניים</button>
+    </div>
+    ${mode==='subtasks'?subtaskContent:manualContent}
+  </div>`;
+}
+
+async function setMode(tid,mode){
+  const t=allTasks.find(x=>x.id===tid);if(t)t.progress_mode=mode;
+  const panel=document.getElementById(`ap-${tid}`);
+  if(panel)panel.innerHTML=buildPanel(tid);
+  updateProgBar(tid);
+  await fetch(`${API}/tasks/${tid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({progress_mode:mode})});
+}
+
+function liveManual(tid,val){
+  const t=allTasks.find(x=>x.id===tid);if(t)t.manual_progress=+val;
+  const lbl=document.getElementById(`mpct-${tid}`);if(lbl)lbl.textContent=val+'%';
+  updateProgBar(tid);
+}
+
+async function saveManual(tid,val){
+  const t=allTasks.find(x=>x.id===tid);if(t)t.manual_progress=+val;
+  updateProgBar(tid);
+  await fetch(`${API}/tasks/${tid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({manual_progress:parseInt(val),progress_mode:'manual'})});
+  await loadStats();
+}
+function row(t){
+  const isOvr=t.due_date&&new Date(t.due_date)<new Date()&&!['submitted','done'].includes(t.status);
+  const color=t.course_color||courseColor(t.course)||'#6c8fff';
+  const bg=hex2rgba(color,.13);
+  const subs=taskSubtasks[t.id]||[];
+  const mode=t.progress_mode||'subtasks';
+  const pct=mode==='manual'?(t.manual_progress||0):calcPct(subs);
+  return `
+  <tr class="task-row${isOvr?' overdue-row':''}" id="tr-${t.id}" onclick="toggleAcc(event,${t.id})">
+    <td style="min-width:190px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="flex:1;min-width:0">
+          <div class="task-title">${esc(t.title)}</div>
+          ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
+        </div>
+        <span class="expand-icon" id="ei-${t.id}">▼</span>
+      </div>
+    </td>
+    <td>
+      <span class="pill" style="background:${bg};color:${color};border-color:${hex2rgba(color,.3)}">
+        <span class="pill-dot" style="background:${color}"></span>
+        ${esc(t.course||'—')}
+      </span>
+    </td>
+    <td><span class="type-badge type-${t.type}">${t.type==='academic'?'📘 אקדמי':'⭐ אישי'}</span></td>
+    <td><span class="due-date ${dueCls(t.due_date,t.status)}">${fmtDue(t.due_date,t.status)}</span></td>
+    <td>
+      <div class="prog-wrap">
+        <div class="prog-bar">
+          <div class="prog-fill" id="pf-${t.id}" style="width:${pct}%;background:${progColor(pct)}"></div>
+        </div>
+        <span class="prog-pct" id="pp-${t.id}">${pct}%</span>
+      </div>
+    </td>
+    <td style="text-align:center">
+      <button class="del-btn" onclick="event.stopPropagation();deleteTask(${t.id})">🗑</button>
+    </td>
+  </tr>
+  <tr class="acc-row" id="acc-${t.id}">
+    <td colspan="6"><div class="acc-panel" id="ap-${t.id}"></div></td>
+  </tr>`;
+}
+
+function showError(msg){ document.getElementById('taskTbody').innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">${msg}</div></div></td></tr>`; }
+
+/* ── ACTIONS ──────────────────────────────────────── */
+async function updateStatus(id,val,sel){
+  const map={not_started:'s-ns',in_progress:'s-ip',done:'s-dn',submitted:'s-sb'};
+  sel.className=`cl-status-sel ${map[val]||'s-ns'}`;
+  await fetch(`${API}/tasks/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:val})});
+  await loadStats(); showToast('סטטוס עודכן','success');
+}
+async function deleteTask(id){
+  if(!confirm('למחוק?')) return;
+  await fetch(`${API}/tasks/${id}`,{method:'DELETE'});
+  await loadTasks(); await loadStats(); showToast('נמחק','info');
+}
+
+/* ── ADD TASK ─────────────────────────────────────── */
+function openAddTask(){
+  ['newTitle','newCourse','newNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('newDueDate').value='';
+  document.getElementById('newStatus').value='not_started';
+  openModal('addModal');
+}
+async function submitAddTask(){
+  const title=document.getElementById('newTitle').value.trim();
+  if(!title){showToast('חסר שם','error');return;}
+  const dd=document.getElementById('newDueDate').value;
+  await fetch(`${API}/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title,course:document.getElementById('newCourse').value||'אישי',
+      type:'personal',due_date:dd?dd.replace('T',' '):null,
+      status:document.getElementById('newStatus').value,
+      notes:document.getElementById('newNotes').value})});
+  closeModal('addModal'); await loadTasks(); await loadStats(); await loadCourses();
+  showToast('משימה נוספה!','success');
+}
+
+/* ── WEBWORK ──────────────────────────────────────── */
+function openAddWebwork(){ document.getElementById('wwManName').value=''; document.getElementById('wwManDate').value=''; document.getElementById('wwResult').textContent=''; document.getElementById('wwPreview').style.display='none'; document.getElementById('wwFile').value=''; wwTab('img'); openModal('wwModal'); }
+function wwTab(t){ document.getElementById('wwPaneImg').style.display=t==='img'?'':'none'; document.getElementById('wwPaneMan').style.display=t==='man'?'':'none'; document.getElementById('wwTabImg').className='tab-btn'+(t==='img'?' active':''); document.getElementById('wwTabMan').className='tab-btn'+(t==='man'?' active':''); }
+function previewWW(inp){ const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{document.getElementById('wwPreviewImg').src=e.target.result;document.getElementById('wwPreview').style.display='';};r.readAsDataURL(f); }
+async function submitWWImage(){
+  const fi=document.getElementById('wwFile'),res=document.getElementById('wwResult'),btn=document.getElementById('wwImgBtn');
+  if(!fi.files[0]){showToast('בחר תמונה','error');return;}
+  btn.disabled=true;btn.textContent='⏳ AI...';res.style.color='var(--yellow)';res.textContent='מנתח...';
+  const fd=new FormData();fd.append('image',fi.files[0]);fd.append('course',document.getElementById('wwImgCourse').value);
+  try{
+    const modeEl=document.getElementById('wwModeLabel');
+    if(modeEl) modeEl.textContent='מחלץ...';
+    const raw=await fetch(`${API}/import/webwork-image`,{method:'POST',body:fd}); const text=await raw.text(); let data;
+    try{data=JSON.parse(text);}catch{res.style.color='var(--red)';res.textContent='❌ '+text.slice(0,80);return;}
+    if(data.ok){res.style.color='var(--green)';res.textContent=`✅ ${data.extracted} HW, ${data.added} נוספו`;await loadTasks();await loadStats();showToast(`✅ ${data.added} WW`,'success');setTimeout(()=>closeModal('wwModal'),1500);}
+    else{res.style.color='var(--red)';res.textContent='❌ '+data.error;}
+  }catch(e){res.style.color='var(--red)';res.textContent='❌ '+e.message;}
+  finally{btn.disabled=false;btn.textContent='🤖 חלץ והוסף';}
+}
+async function submitWWManual(){
+  const name=document.getElementById('wwManName').value.trim();if(!name){showToast('הזן שם','error');return;}
+  const course=document.getElementById('wwManCourse').value, dd=document.getElementById('wwManDate').value;
+  const title=name.toUpperCase().startsWith('HW')?`WebWork ${name.toUpperCase()}`:`WebWork HW – ${name}`;
+  await fetch(`${API}/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,course,type:'academic',due_date:dd?dd.replace('T',' '):null,status:'not_started',notes:'WebWork'})});
+  closeModal('wwModal'); await loadTasks(); await loadStats(); await loadCourses(); showToast(`✅ ${title}`,'success');
+}
+
+/* ── SYNC ─────────────────────────────────────────── */
+async function triggerSync(){
+  const btn=document.getElementById('syncBtn'),dot=document.getElementById('syncDot');
+  btn.disabled=true;btn.textContent='⏳';dot.className='sync-dot spin';
+  try{ const data=await fetch(`${API}/sync`,{method:'POST'}).then(r=>r.json());
+    if(data.status==='success') showToast(data.new_tasks>0?`🎉 ${data.new_tasks} חדשות`:'✅ אין חדש','success');
+    else if(data.status==='skipped'){showToast('הגדר iCal','info');openSettings();}
+    else showToast(`❌ ${data.message}`,'error');
+    await loadTasks();await loadStats();await loadSyncLog();
+  }finally{btn.disabled=false;btn.textContent='🔄 סנכרן';dot.className='sync-dot';}
+}
+async function clearAndResync(){
+  if(!confirm('מחק נתונים ישנים וסנכרן מחדש?\n(משימות אישיות נשמרות)')) return;
+  const btn=document.getElementById('clearBtn');btn.disabled=true;btn.textContent='⏳';
+  try{
+    await fetch(`${API}/tasks/clear-moodle`,{method:'POST'});showToast('🗑️ נוקה','info');
+    const data=await fetch(`${API}/sync`,{method:'POST'}).then(r=>r.json());
+    if(data.status==='success') showToast(`✅ ${data.total} אירועים`,'success');
+    else if(data.status==='skipped'){showToast('הגדר iCal','info');openSettings();}
+    else showToast(`❌ ${data.message}`,'error');
+    await loadTasks();await loadStats();await loadCourses();await loadSyncLog();
+  }finally{btn.disabled=false;btn.textContent='🗑️ נקה';}
+}
+
+/* ── SETTINGS ─────────────────────────────────────── */
+async function openSettings(){
+  try{
+    const s=await fetch(`${API}/settings`).then(r=>r.json());
+    document.getElementById('sIcal').value=s.ical_url||'';
+    document.getElementById('sStatus').textContent=s.has_ical?'🔐 שמור':'';
+    const akEl=document.getElementById('sApiKey');
+    akEl.value=''; // never pre-fill password; show placeholder from preview
+    akEl.placeholder=s.has_api_key?(s.api_key_preview||'sk-ant-...(שמור)'):'sk-ant-...';
+    document.getElementById('sApiStatus').textContent=s.has_api_key?'✅ מפתח שמור':'⚠️ מפתח חסר — WebWork AI לא יעבוד';
+    document.getElementById('sApiStatus').style.color=s.has_api_key?'var(--green)':'var(--yellow)';
+  }catch(e){}
+  openModal('settingsModal');
+}
+async function saveSettings(){
+  const url=document.getElementById('sIcal').value.trim();
+  const apiKey=document.getElementById('sApiKey').value.trim();
+  const body={ical_url:url};
+  if(apiKey) body.anthropic_api_key=apiKey; // only send if user typed something
+  await fetch(`${API}/settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  closeModal('settingsModal');showToast('✅ נשמר','success');
+}
+async function testIcal(){
+  const url=document.getElementById('sIcal').value.trim(),st=document.getElementById('sStatus');
+  st.textContent='⏳...';st.style.color='var(--yellow)';
+  try{const d=await fetch(`${API}/settings/test-ical`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}).then(r=>r.json());st.style.color=d.ok?'var(--green)':'var(--red)';st.textContent=d.message;}
+  catch(e){st.textContent='❌';st.style.color='var(--red)';}
+}
+async function runDebug(){
+  const url=document.getElementById('sIcal').value.trim();
+  if(url) await fetch(`${API}/settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ical_url:url})});
+  const out=document.getElementById('debugOut');out.style.display='';out.innerHTML='⏳...';
+  try{
+    const data=await fetch(`${API}/debug/ical-uids`).then(r=>r.json());
+    if(data.error){out.innerHTML='❌ '+data.error;return;}
+    const unknowns=data.events.filter(e=>e.course_resolved==='לא ידוע');
+    const known=data.events.filter(e=>e.course_resolved!=='לא ידוע');
+    let html=`<b>${data.total} אירועים</b> &nbsp;—&nbsp; <span style="color:var(--green)">✅ ${known.length} מזוהים</span> &nbsp;|&nbsp; <span style="color:var(--yellow)">⚠️ ${unknowns.length} לא ידוע</span><br><br>`;
+    
+    if(unknowns.length){
+      html+=`<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:6px;padding:8px 12px;margin-bottom:12px">
+        <b style="color:var(--yellow)">⚠️ קורסים לא מזוהים — הוסף אותם ב"ברירות מחדל":</b><br>`;
+      // Group unknowns by course_num
+      const byCourseNum={};
+      unknowns.forEach(e=>{
+        const cn=e.course_num||'(ללא מספר)';
+        if(!byCourseNum[cn]) byCourseNum[cn]={count:0,sample:e.summary};
+        byCourseNum[cn].count++;
+      });
+      Object.entries(byCourseNum).forEach(([cn,info])=>{
+        html+=`<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <code style="background:var(--surface3);padding:2px 7px;border-radius:4px;color:var(--accent);font-size:12px">${cn}</code>
+          <span style="font-size:11px;color:var(--muted)">${info.count} מטלות · לדוגמה: "${esc(info.sample)}"</span>
+          <button class="btn" style="font-size:10px;padding:2px 8px;color:var(--accent);border-color:var(--accent)"
+            onclick="prefillCategoryFromDebug('${cn}')">+ הוסף קטגוריה</button>
+        </div>`;
+      });
+      html+='</div>';
+    }
+
+    data.events.slice(0,40).forEach(e=>{
+      const col=e.course_resolved==='לא ידוע'?'var(--yellow)':'var(--green)';
+      const cnBadge=e.course_num?`<code style="font-size:10px;background:var(--surface3);padding:1px 5px;border-radius:3px;color:var(--accent)">${e.course_num}</code>`:'';
+      html+=`<span style="color:${col}">[${esc(e.course_resolved)}]</span> ${cnBadge} ${esc(e.summary)}<br>`;
+    });
+    out.innerHTML=html;
+  }catch(e){out.innerHTML='❌ '+e.message;}
+}
+
+function prefillCategoryFromDebug(courseNum){
+  // Close settings, open add-category modal with pre-filled course_num
+  closeModal('settingsModal');
+  setTimeout(()=>{
+    switchTab('defaults');
+    openAddCategory();
+    document.getElementById('catCourseId').value=courseNum;
+    document.getElementById('catType').value='academic';
+    _updateCatTypeUI();
+    document.getElementById('catName').focus();
+  },150);
+}
+
+/* ── TOOLBAR ──────────────────────────────────────── */
+function filterTable(){renderTable(allTasks);}
+function clearFilters(){ ['fStatus','fType','fCourse'].forEach(id=>document.getElementById(id).value=''); document.getElementById('searchInput').value=''; document.getElementById('fSort').value='due_date'; loadTasks(); }
+
+/* ── MODALS ───────────────────────────────────────── */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(el=>closeModal(el.id));});
+
+/* ── TOAST ────────────────────────────────────────── */
+function showToast(msg,type='info'){const w=document.getElementById('toastWrap');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3000);}
+
+/* ── DATES ────────────────────────────────────────── */
+function dueCls(due,status){if(!due)return 'none';if(['submitted','done'].includes(status))return 'ok';const d=new Date(due),n=new Date();if(d<n)return 'overdue';if(d-n<7*86400000)return 'soon';return 'ok';}
+function fmtDue(due,status){if(!due)return '—';const d=new Date(due),n=new Date();if(['submitted','done'].includes(status))return `✅ ${d.toLocaleDateString('he-IL')}`;const diff=d-n;if(diff<0){return `⚠️ איחור ${Math.abs(Math.ceil(diff/86400000))} יום`;}if(diff<3600000)return `🔥 עוד ${Math.ceil(diff/3600000)} שעות`;if(diff<86400000)return `🔥 עוד ${Math.ceil(diff/3600000)} שעות`;if(diff<7*86400000)return `⏰ עוד ${Math.ceil(diff/86400000)} ימים`;return d.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'2-digit'});}
+function relTime(d){const m=Math.floor((Date.now()-d)/60000);if(m<1)return 'עכשיו';if(m<60)return `לפני ${m} דקות`;const h=Math.floor(m/60);if(h<24)return `לפני ${h} שעות`;return `לפני ${Math.floor(h/24)} ימים`;}
+
+/* ══════════════════════════════════════════════════
+   ACCORDION + SUBTASKS
+══════════════════════════════════════════════════ */
+async function toggleAcc(e,id){
+  if(e.target.closest('button,input,select')) return;
+  const panel=document.getElementById(`ap-${id}`), trow=document.getElementById(`tr-${id}`);
+  if(!panel) return;
+  if(openAccordions.has(id)){
+    panel.classList.remove('open'); trow&&trow.classList.remove('acc-open'); openAccordions.delete(id);
+  } else {
+    if(!taskSubtasks.hasOwnProperty(id)){try{taskSubtasks[id]=await fetch(`${API}/tasks/${id}/subtasks`).then(r=>r.json());}catch{taskSubtasks[id]=[];}}
+    panel.innerHTML=buildPanel(id); panel.classList.add('open'); trow&&trow.classList.add('acc-open'); openAccordions.add(id);
+  }
+}
+
+async function toggleCheck(tid,sid){
+  const subs=taskSubtasks[tid]||[], sub=subs.find(s=>s.id===String(sid));
+  if(sub) sub.done=!sub.done; taskSubtasks[tid]=subs;
+  const li=document.getElementById(`cli-${tid}-${sid}`);
+  if(li) li.className=`cl-item${sub&&sub.done?' done-item':''}`;
+  const panel=document.getElementById(`ap-${tid}`),hdr=panel&&panel.querySelector('.cl-title');
+  if(hdr){const d=subs.filter(s=>s.done).length;hdr.textContent=`תתי-משימות · ${d}/${subs.length}`;}
+  updateProgBar(tid);
+  try{const res=await fetch(`${API}/tasks/${tid}/subtasks`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(subs)});const d=await res.json();if(d.status){const t=allTasks.find(x=>x.id===tid);if(t)t.status=d.status;}await loadStats();}catch(e){}
+}
+
+async function addSub(tid,text){
+  const subs=taskSubtasks[tid]||[];
+  subs.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),text,done:false});
+  taskSubtasks[tid]=subs;
+  const panel=document.getElementById(`ap-${tid}`);
+  if(panel){panel.innerHTML=buildPanel(tid);const inp=panel.querySelector('.cl-quick input');if(inp)inp.focus();}
+  updateProgBar(tid);
+  try{await fetch(`${API}/tasks/${tid}/subtasks`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(subs)});await loadStats();}catch(e){}
+}
+
+async function delSub(tid,sid){
+  taskSubtasks[tid]=(taskSubtasks[tid]||[]).filter(s=>s.id!==String(sid));
+  const panel=document.getElementById(`ap-${tid}`);if(panel)panel.innerHTML=buildPanel(tid);
+  updateProgBar(tid);
+  try{await fetch(`${API}/tasks/${tid}/subtasks`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(taskSubtasks[tid])});await loadStats();}catch(e){}
+}
+
+/* ══════════════════════════════════════════════════
+   SCHEDULE / מערכת שעות
+══════════════════════════════════════════════════ */
+const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const SLOT_H  = 32;   // px per 30-min slot
+const START_H = 8, END_H = 22;
+const TOTAL_SLOTS = (END_H - START_H) * 2;
+
+function slotLabel(s){ const h=START_H+Math.floor(s/2),m=s%2?'30':'00'; return `${h}:${m.padStart(2,'0')}`; }
+
+function buildTimeSelect(){
+  const sel=document.getElementById('blkStart');
+  for(let i=0;i<TOTAL_SLOTS;i++){
+    const o=document.createElement('option');
+    o.value=i; o.textContent=slotLabel(i); sel.appendChild(o);
+  }
+}
+
+function buildColorPicker(){
+  const wrap=document.getElementById('blkColorPicker');
+  PERSONAL_COLORS.forEach((c,i)=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.style.cssText=`width:24px;height:24px;border-radius:50%;background:${c};
+      border:2px solid ${i===0?'#fff':'transparent'};cursor:pointer;transition:all .15s`;
+    btn.dataset.color=c;
+    btn.onclick=e=>{e.preventDefault();
+      wrap.querySelectorAll('button').forEach(b=>b.style.border='2px solid transparent');
+      btn.style.border='2px solid #fff';};
+    wrap.appendChild(btn);
+  });
+}
+
+function updateBlkCourse(){
+  const ac=document.getElementById('blkType').value==='academic';
+  document.getElementById('blkCourseGrp').style.display=ac?'':'none';
+  document.getElementById('blkColorGrp').style.display=ac?'none':'';
+}
+
+async function renderSchedule(){
+  try{ scheduleBlocks=await fetch(`${API}/schedule`).then(r=>r.json()); }
+  catch{ scheduleBlocks=[]; }
+
+  const container=document.getElementById('schedGrid');
+  container.innerHTML='';
+
+  const today=new Date().getDay(); // 0=Sun
+
+  // ── Build layout: flex row ──────────────────────────────
+  // [time-col] [day0-col] [day1-col] ... [day5-col]
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;min-width:720px';
+
+  // Time column
+  const timeCol=document.createElement('div');
+  timeCol.style.cssText='width:54px;flex-shrink:0;border-right:1px solid var(--border-s)';
+
+  // Header corner
+  const corner=document.createElement('div');
+  corner.style.cssText='height:36px;background:var(--surface2);border-bottom:1px solid var(--border)';
+  timeCol.appendChild(corner);
+
+  // Time labels
+  for(let s=0;s<TOTAL_SLOTS;s++){
+    const lbl=document.createElement('div');
+    lbl.style.cssText=`height:${SLOT_H}px;display:flex;align-items:flex-start;
+      justify-content:center;padding-top:3px;
+      font-family:'Space Mono',monospace;font-size:9px;color:var(--subtle);
+      background:var(--surface2);
+      ${s%2===0?'border-top:1px solid var(--border);color:var(--muted);':''}`;
+    lbl.textContent=s%2===0?slotLabel(s):'';
+    timeCol.appendChild(lbl);
+  }
+  wrap.appendChild(timeCol);
+
+  // Day columns
+  const dayCols=[];
+  DAYS.forEach((name,di)=>{
+    const col=document.createElement('div');
+    col.style.cssText=`flex:1;position:relative;
+      border-right:${di<5?'1px solid var(--border-s)':'none'}`;
+
+    // Day header
+    const hdr=document.createElement('div');
+    hdr.style.cssText=`height:36px;background:${di===today?'var(--accent-dim)':'var(--surface2)'};
+      border-bottom:1px solid var(--border);display:flex;align-items:center;
+      justify-content:center;font-size:11px;font-weight:700;letter-spacing:.4px;
+      color:${di===today?'var(--accent)':'var(--muted)'};`;
+    hdr.textContent=name;
+    col.appendChild(hdr);
+
+    // Slot lines (background grid)
+    const slotWrap=document.createElement('div');
+    slotWrap.style.cssText='position:relative';
+    for(let s=0;s<TOTAL_SLOTS;s++){
+      const slot=document.createElement('div');
+      slot.style.cssText=`height:${SLOT_H}px;cursor:pointer;transition:background .1s;
+        ${s%2===0?'border-top:1px solid var(--border);':'border-top:1px solid var(--border-s);'}`;
+      slot.onmouseenter=()=>slot.style.background='var(--accent-dim)';
+      slot.onmouseleave=()=>slot.style.background='';
+      slot.onclick=()=>openAddBlockAt(di,s);
+      slotWrap.appendChild(slot);
+    }
+    col.appendChild(slotWrap);
+    dayCols.push({col, slotWrap});
+    wrap.appendChild(col);
+  });
+
+  container.appendChild(wrap);
+
+  // Place blocks absolutely inside day columns
+  scheduleBlocks.forEach(b=>{
+    if(b.day_of_week<0||b.day_of_week>=6) return;
+    const {slotWrap}=dayCols[b.day_of_week];
+    const color=b.type==='academic'?(b.color||courseColor(b.course)||'#6c8fff'):(b.color||PERSONAL_COLORS[0]);
+    const bg=hex2rgba(color,.22);
+    const border=hex2rgba(color,.55);
+
+    const blk=document.createElement('div');
+    blk.className='sched-block';
+    blk.style.cssText=`
+      top:${b.start_slot*SLOT_H+2}px;
+      height:${b.duration_slots*SLOT_H-4}px;
+      background:${bg};border-color:${border};color:${color};
+      box-shadow:0 2px 8px rgba(0,0,0,.3);
+    `;
+    blk.innerHTML=`
+      <button class="blk-del" onclick="event.stopPropagation();deleteBlock(${b.id})">✕</button>
+      <div class="sched-block-title">${esc(b.title)}</div>
+      ${b.course?`<div class="sched-block-sub">${esc(b.course)}</div>`:''}
+    `;
+    slotWrap.style.position='relative';
+    slotWrap.appendChild(blk);
+  });
+}
+
+function openAddBlock(){ openAddBlockAt(0,2); }
+function openAddBlockAt(day,slot){
+  document.getElementById('blkTitle').value='';
+  document.getElementById('blkDay').value=day;
+  document.getElementById('blkStart').value=slot;
+  document.getElementById('blkDur').value='2';
+  document.getElementById('blkType').value='academic';
+  updateBlkCourse();
+  openModal('schedModal');
+}
+
+async function submitBlock(){
+  const title=document.getElementById('blkTitle').value.trim();
+  if(!title){showToast('חסר שם','error');return;}
+  const type=document.getElementById('blkType').value;
+  const isAc=type==='academic';
+  const course=isAc?document.getElementById('blkCourse').value:'';
+  let color=isAc?courseColor(course)||'#6c8fff':PERSONAL_COLORS[0];
+  if(!isAc){
+    const sel=document.querySelector('#blkColorPicker button[style*="solid #fff"]');
+    if(sel) color=sel.dataset.color;
+  }
+  await fetch(`${API}/schedule`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title,
+      day_of_week:+document.getElementById('blkDay').value,
+      start_slot:+document.getElementById('blkStart').value,
+      duration_slots:+document.getElementById('blkDur').value,
+      type,course,color})});
+  closeModal('schedModal');
+  await renderSchedule();
+  showToast('✅ פעילות נוספה','success');
+}
+
+async function deleteBlock(id){
+  if(!confirm('למחוק פעילות?')) return;
+  await fetch(`${API}/schedule/${id}`,{method:'DELETE'});
+  await renderSchedule();
+  showToast('נמחק','info');
+}
+
+/* ══════════════════════════════════════════════════
+   DEFAULTS EDITOR / עריכת ברירות מחדל
+══════════════════════════════════════════════════ */
+let allCategories=[], editingSubs=[];
+
+async function loadDefaults(){
+  try{
+    allCategories=await fetch(`${API}/categories`).then(r=>r.json());
+    renderDefaults();
+    await loadUnknownCount();
+  }catch(e){document.getElementById('defGrid').innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">שגיאה בטעינה</div></div>';}
+}
+
+function renderDefaults(){
+  const grid=document.getElementById('defGrid');
+  if(!allCategories.length){grid.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-title">אין קטגוריות</div></div>';return;}
+  grid.innerHTML=allCategories.map(cat=>{
+    const subs=JSON.parse(cat.subtasks||'[]');
+    const color=cat.color||'#6c8fff';
+    const hasCourseId=!!(cat.course_id||'').trim();
+    const courseIdBadge=hasCourseId
+      ? `<span style="font-size:10px;color:var(--muted);background:var(--surface3);padding:1px 6px;border-radius:4px;margin-right:4px;font-family:monospace">🔗 ${esc(cat.course_id)}</span>`
+      : `<span style="font-size:10px;color:var(--yellow);opacity:.7">⚠️ אין מספר קורס</span>`;
+    return `<div class="def-card" style="border-color:${hex2rgba(color,.35)}">
+      <div class="def-card-head">
+        <div style="flex:1;min-width:0">
+          <div class="def-card-name">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-left:6px;vertical-align:middle;flex-shrink:0"></span>
+            ${cat.icon||''} ${esc(cat.name)}
+          </div>
+          <div class="def-card-meta" style="margin-top:3px">
+            ${cat.type==='academic'?'📘 אקדמי':'⭐ אישי'} · ${subs.length} שלבים
+          </div>
+          <div style="margin-top:5px">${cat.type==='academic'?courseIdBadge:''}</div>
+        </div>
+        <div class="def-card-actions" style="flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          <div style="display:flex;gap:4px">
+            <button class="btn" style="padding:3px 8px;font-size:11px" onclick="editCategory(${cat.id})">✏️</button>
+            ${!cat.is_builtin?`<button class="btn" style="padding:3px 8px;font-size:11px;background:var(--red-dim);border-color:var(--red);color:var(--red)" onclick="deleteCategory(${cat.id})">🗑</button>`:''}
+          </div>
+          ${hasCourseId && cat.type==='academic' ? `<button class="btn" style="padding:3px 8px;font-size:10px;color:var(--accent);border-color:var(--accent)" onclick="applyCategory(${cat.id}, this)" title="שייך מחדש מטלות לפי מספר קורס">🔗 שייך</button>` : ''}
+        </div>
+      </div>
+      <ul class="def-sub-list">
+        ${subs.slice(0,5).map(s=>`<li class="def-sub-row"><span style="color:${color};font-size:9px;flex-shrink:0">●</span><span>${esc(s.text)}</span>${s.weight!=null?`<span class="def-sub-w">${s.weight}%</span>`:''}</li>`).join('')}
+        ${subs.length>5?`<li class="def-sub-row" style="color:var(--subtle)">+${subs.length-5} עוד...</li>`:''}
+      </ul>
+    </div>`;
+  }).join('');
+}
+
+async function applyCategory(cid, btn){
+  const orig=btn.textContent; btn.disabled=true; btn.textContent='⏳';
+  try{
+    const r=await fetch(`${API}/categories/${cid}/apply`,{method:'POST'}).then(x=>x.json());
+    if(r.updated>0){ showToast(`✅ ${r.message}`,'success'); await loadTasks(); await loadUnknownCount(); }
+    else showToast('אין מטלות תואמות — בדוק מספר קורס','info');
+  }catch(e){showToast('שגיאה','error');}
+  finally{btn.disabled=false;btn.textContent=orig;}
+}
+
+async function loadUnknownCount(){
+  try{
+    const d=await fetch(`${API}/tasks/unknown-count`).then(r=>r.json());
+    const banner=document.getElementById('unknownBanner');
+    const txt=document.getElementById('unknownBannerText');
+    const sample=document.getElementById('unknownSample');
+    if(d.count>0){
+      banner.style.display='';
+      txt.textContent=`⚠️ יש ${d.count} מטלות שקורסן לא מזוהה ("לא ידוע"). הוסף מספר קורס לקטגוריה ולחץ 🔗 שייך.`;
+      if(d.sample && d.sample.length){
+        sample.textContent='לדוגמה: '+d.sample.slice(0,2).map(t=>t.title).join(', ');
+      }
+    } else {
+      banner.style.display='none';
+    }
+  }catch(e){}
+}
+
+function _renderCatSubList(){
+  document.getElementById('catSubList').innerHTML=editingSubs.map((s,i)=>`
+    <div class="cat-sub-row">
+      <input type="text" class="form-input" value="${esc(s.text)}" style="flex:1;font-size:12px;padding:5px 8px"
+             oninput="editingSubs[${i}].text=this.value"/>
+      <input type="number" class="form-input" value="${s.weight!=null?s.weight:''}" min="0" max="100"
+             placeholder="%" style="width:56px;font-size:12px;padding:5px 6px;text-align:center"
+             oninput="editingSubs[${i}].weight=parseInt(this.value)||0;_updateWTotal()"/>
+      <button onclick="editingSubs.splice(${i},1);_renderCatSubList()"
+              style="background:none;border:none;color:var(--subtle);cursor:pointer;font-size:14px;padding:0 4px;flex-shrink:0">✕</button>
+    </div>`).join('');
+  _updateWTotal();
+}
+
+function _updateWTotal(){
+  const total=editingSubs.reduce((a,s)=>a+(s.weight||0),0);
+  const el=document.getElementById('catWTotal');
+  if(el){el.textContent=`סה"כ: ${total}%`;el.style.color=total===100?'var(--green)':total>100?'var(--red)':'var(--yellow)';}
+}
+
+function addCatSubRow(){
+  editingSubs.push({id:Date.now().toString(36),text:'',done:false,weight:0});
+  _renderCatSubList();
+  const ins=document.querySelectorAll('.cat-sub-row input[type="text"]');
+  ins[ins.length-1]?.focus();
+}
+
+function _updateCatTypeUI(){
+  const isAcad=document.getElementById('catType').value==='academic';
+  document.getElementById('catCourseIdGroup').style.display=isAcad?'':'none';
+}
+
+function openAddCategory(){
+  document.getElementById('catId').value='';
+  document.getElementById('catModalTitle').textContent='+ קטגוריה חדשה';
+  document.getElementById('catName').value='';document.getElementById('catName').disabled=false;
+  document.getElementById('catType').value='academic';
+  document.getElementById('catColor').value='#6c8fff';
+  document.getElementById('catIcon').value='📘';
+  document.getElementById('catCourseId').value='';
+  _updateCatTypeUI();
+  editingSubs=[];_renderCatSubList();openModal('catModal');
+}
+
+function editCategory(cid){
+  const cat=allCategories.find(c=>c.id===cid);if(!cat)return;
+  document.getElementById('catId').value=cid;
+  document.getElementById('catModalTitle').textContent=`✏️ ${cat.name}`;
+  document.getElementById('catName').value=cat.name;document.getElementById('catName').disabled=!!cat.is_builtin;
+  document.getElementById('catType').value=cat.type;
+  document.getElementById('catColor').value=cat.color||'#6c8fff';
+  document.getElementById('catIcon').value=cat.icon||'📘';
+  document.getElementById('catCourseId').value=cat.course_id||'';
+  _updateCatTypeUI();
+  try{editingSubs=JSON.parse(cat.subtasks||'[]').map(s=>({...s}));}catch{editingSubs=[];}
+  _renderCatSubList();openModal('catModal');
+}
+
+async function saveCategory(){
+  const name=document.getElementById('catName').value.trim();
+  if(!name){showToast('הזן שם','error');return;}
+  const cid=document.getElementById('catId').value;
+  const courseId=document.getElementById('catCourseId').value.trim();
+  const payload={name,type:document.getElementById('catType').value,
+    color:document.getElementById('catColor').value,icon:document.getElementById('catIcon').value||'📘',
+    course_id:courseId,
+    subtasks:editingSubs.filter(s=>s.text.trim())};
+  try{
+    let savedId=cid;
+    if(cid){
+      await fetch(`${API}/categories/${cid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    } else {
+      const r=await fetch(`${API}/categories`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const d=await r.json(); savedId=d.id;
+    }
+    // Apply course_id: re-assign matching tasks
+    if(courseId && savedId){
+      const r=await fetch(`${API}/categories/${savedId}/apply`,{method:'POST'}).then(x=>x.json());
+      if(r.updated>0){
+        showToast(`✅ נשמר · ${r.updated} מטלות שויכו לקורס`,'success');
+        await loadTasks(); // refresh task list
+      } else {
+        showToast('✅ נשמר','success');
+      }
+    } else {
+      showToast('✅ נשמר','success');
+    }
+    closeModal('catModal');await loadDefaults();
+  }catch(e){showToast('שגיאה','error');}
+}
+
+async function deleteCategory(cid){
+  if(!confirm('למחוק?'))return;
+  const d=await fetch(`${API}/categories/${cid}`,{method:'DELETE'}).then(r=>r.json());
+  if(d.ok){await loadDefaults();showToast('נמחק','info');}else showToast(d.error||'שגיאה','error');
+}
+</script>
+</body>
+</html>
