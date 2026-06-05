@@ -89,7 +89,8 @@ def init_db():
                 color      TEXT DEFAULT '#6c8fff',
                 icon       TEXT DEFAULT '📘',
                 subtasks   TEXT DEFAULT '[]',
-                is_builtin INTEGER DEFAULT 0
+                is_builtin INTEGER DEFAULT 0,
+                course_id  TEXT DEFAULT ''
             )
         ''')
         _seed_categories(conn)
@@ -797,15 +798,20 @@ def delete_category(cid):
     return jsonify({'ok': True})
 
 # ══════════════════════════════════════════════════════════════
-#  MAIN
+#  STARTUP — runs under gunicorn AND when called directly
+#  (previously inside __main__ only — tables never created on Render!)
+# ══════════════════════════════════════════════════════════════
+init_db()
+init_schedule_db()
+_startup_settings = load_settings()
+if _startup_settings.get('ical_url'):
+    threading.Thread(target=sync_moodle, daemon=True).start()
+threading.Thread(target=_scheduler_loop, daemon=True).start()
+
+# ══════════════════════════════════════════════════════════════
+#  MAIN — Flask dev server only (not used by gunicorn/Render)
 # ══════════════════════════════════════════════════════════════
 if __name__ == '__main__':
-    init_db()
-    init_schedule_db()
-    settings = load_settings()
-    if settings.get('ical_url'):
-        threading.Thread(target=sync_moodle, daemon=True).start()
-    threading.Thread(target=_scheduler_loop, daemon=True).start()
     port = int(os.environ.get('PORT', 5000))
     print('\n' + '='*50)
     print('  🚀 TripleM – Moodle Mission Manager  v9')
